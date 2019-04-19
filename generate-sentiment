@@ -1,0 +1,114 @@
+#generate sentiment
+library(tidytext)
+#choose the pre-processed file 
+sen <- read.csv(file.choose()) 
+
+#transform tweet to character
+sen$tweet_1 <- as.character(sen$tweet)
+
+#choose the columns for text, date, group number
+book_1 <- subset(sen,select=c(1,5,4))
+names(book_1) <- c("tweet_id","text","grp_id")
+
+#tokenization
+tidy_text <- book_1 %>% group_by(tweet_id) %>% unnest_tokens(word, text) %>% ungroup()
+
+#word count
+word_count <- tidy_text %>% count(word, sort=TRUE)
+
+library(tidyr)
+#sentiment by each tweet (by id)
+sentiment_nrc_3 <- tidy_text %>% group_by(tweet_id) %>%
+  inner_join(get_sentiments("nrc")) %>% 
+  count(sentiment) %>% 
+  spread(sentiment, n, fill = 0) %>%
+  mutate(Overall =  positive - negative)
+
+#combine file
+library(sqldf)
+data_f1 <- sqldf(' select sen.date_c,sen.tweet_1 as tweet, sen.group_id, sentiment_nrc_3.anger, sentiment_nrc_3.anticipation, 
+sentiment_nrc_3.disgust,sentiment_nrc_3.fear, sentiment_nrc_3.joy, sentiment_nrc_3.negative, sentiment_nrc_3.positive, 
+sentiment_nrc_3.sadness,sentiment_nrc_3.surprise, sentiment_nrc_3.trust, sentiment_nrc_3.Overall from sen, 
+sentiment_nrc_3 where sen.X = sentiment_nrc_3.tweet_id ') 
+write.csv(data_f1,"location/data_sentiment.csv")
+
+#before and after response
+data_f1_b <- sqldf(' select date_c,tweet,group_id,anger, anticipation, disgust,fear, joy,negative,positive,sadness,surprise, trust, Overall from data_f1 where group_id = 0')
+data_f1_a <- sqldf(' select date_c,tweet,group_id,anger, anticipation, disgust,fear, joy,negative,positive,sadness,surprise, trust, Overall from data_f1 where group_id = 1')
+
+#word count data
+nrc <- get_sentiments("nrc")
+sent_count <- word_count %>% inner_join(get_sentiments("nrc"), c("word" = "word"))
+word_df <- sqldf(" select word_count.word, nrc.sentiment, word_count.n from word_count,nrc where word_count.word = nrc.word   ")
+
+
+library(sqldf)
+#scores before 
+data_f1_b_score <- sqldf('  select sum(anger) as anger, sum(anticipation) as anticipation, sum(disgust) as disgust, 
+sum(fear) as fear, sum(joy) as joy,sum(negative) as negative,sum(positive) as positive,sum(sadness) as sadness,
+sum(surprise) as surprise, sum(trust) as trust, sum(Overall) as Overall from data_f1_b ')
+
+data_f1_b_score_t <- t(data_f1_b_score)
+names(data_f1_b_score_t) <- c("Count")
+data_f1_b_score_t <- cbind("sentiment" = rownames(data_f1_b_score_t), "score" = data_f1_b_score_t[,1])
+rownames(data_f1_b_score_t) <- NULL
+data_f1_b_score_t <- as.data.frame(data_f1_b_score_t)
+data_f1_b_score_t$score1 <- as.numeric(levels(data_f1_b_score_t$score)[data_f1_b_score_t$score])
+write.csv(data_f1_b_score_t,"lcoation/data_f1_b_score_t.csv")
+
+#after response
+data_f1_a_score <- sqldf('  select sum(anger) as anger, sum(anticipation) as anticipation, sum(disgust) as disgust, 
+sum(fear) as fear, sum(joy) as joy,sum(negative) as negative,sum(positive) as positive,sum(sadness) as sadness,sum(surprise) 
+as surprise, sum(trust) as trust, sum(Overall) as Overall from data_f1_a ')
+data_f1_a_score_t <- t(data_f1_a_score)
+names(data_f1_a_score_t) <- c("Count")
+data_f1_a_score_t <- cbind("sentiment" = rownames(data_f1_a_score_t), "score" = data_f1_a_score_t[,1])
+rownames(data_f1_a_score_t) <- NULL
+data_f1_a_score_t <- as.data.frame(data_f1_a_score_t)
+
+#numeric levels
+data_f1_a_score_t$score1 <- as.numeric(levels(data_f1_a_score_t$score)[data_f1_a_score_t$score])
+write.csv(data_f1_a_score_t,"local/data_f1_a_score_t.csv")
+
+#plot graph before response
+library(ggplot2)
+library(scales)
+ggplot(data_f1_b_score_t,aes(x=sentiment,y=score1 ) ) + 
+  geom_bar(aes(fill=sentiment),stat = "identity",position="identity") + ggtitle("BEFORE RESPONSE") +
+  theme(legend.position = "none") + ylab("SCORE") +
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5)) + 
+    ylim(-500,15000)
+
+#plot after response
+library(scales)
+ggplot(data_f1_a_score_t,aes(x=sentiment,y=score1 ) ) + 
+  geom_bar(aes(fill=sentiment),stat = "identity") + ggtitle("AFTER RESPONSE") +
+  theme(legend.position = "none") + ylab("SCORE") + 
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5)) +
+    scale_y_continuous(limits = c(0,3000))
+
+
+#words  before  response
+#tokenization
+data_f1_b$tweet_1 <- as.character(data_f1_b$tweet)
+word_count_b <- data_f1_b %>% group_by(tweet_1) %>%unnest_tokens(word, tweet_1) %>% ungroup()
+word_count_b1 <- subset(word_count_b,select = c(15))
+#word count
+word_count_b2 <- word_count_b1 %>% count(word, sort=TRUE)
+word_count_b3 <- word_count_b2 %>% inner_join(get_sentiments("nrc"))
+words_before <- sqldf(' select sentiment, sum(n) from word_count_b3 group by sentiment ')
+write.csv(words_before,"loc/words_before.csv")
+
+#after response word count
+#tokenization
+data_f1_a$tweet_1 <- as.character(data_f1_a$tweet)
+word_count_a <- data_f1_a %>% group_by(tweet_1) %>%unnest_tokens(word, tweet_1) %>% ungroup()
+word_count_a1 <- subset(word_count_a,select = c(15))
+
+#word count
+word_count_a2 <- word_count_a1 %>% count(word, sort=TRUE)
+word_count_a3 <- word_count_a2 %>% inner_join(get_sentiments("nrc"))
+words_after <- sqldf(' select sentiment, sum(n) from word_count_a3 group by sentiment ')
+write.csv(words_after,"loc/words_after.csv")
+
+
