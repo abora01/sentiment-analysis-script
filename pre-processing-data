@@ -1,0 +1,79 @@
+# loading data  
+# use sepearators as appropriate
+data <- read.csv(file.choose())
+
+#the data set contains columns for date, text, hashtag, URL, mentions etc.
+#you can choose different columns based on your requirement.
+#select columns = date,text (for text analysis)
+data_1 <- subset(data,select = c(2,5)) 
+
+#transform date in mdy_hm
+#optional: if required for any analysis
+library(lubridate)
+data_1$date_1 <- mdy_hm(data_1$date) 
+data_1$text_1 <- as.character(data_1$text) 
+
+#create a subset of the data
+data_2 <- subset(data_1,select = c(3,4))
+
+#backup
+data_3 <- data_2
+
+#change date to character
+data_3$date_c <- as.character(data_3$date_1)
+
+#group data based on project requirement (before,after in my case) 
+#ignore if not required
+data_3$group <- ifelse(data_3$date_c < as.POSIXct("yyyy-m-d 00:00:00"),0,1)
+data_3_1 <- data_3
+
+#clean tweet data
+library(stringr)
+data_3$text_1 <- gsub("((?:\\b\\W*@\\w+)+)","",data_3$text_1) 
+data_3$text_1 <- gsub("\\b+RT","", data_3$text_1) #remove RT:
+data_3$text_1 <- gsub("\\b+RT:","", data_3$text_1) #remove RT:
+data_3$text_1 <- gsub("\\b+RT :","", data_3$text_1) #remove RT :
+data_3$text_1 <- gsub("(ftp|http)(s?)://.*\\b", "", data_3$text_1) #remove URLs (http, https, ftp)
+data_3$text_1 <- tolower(data_3$text_1)
+data_3$text_1 <- gsub("#","",data_3$text_1) # remove #
+data_3$text_1 <- gsub("pic[a-z,A-Z,0-9,.,/]*","", pep_3$text_1) 3 remove url part after space
+
+library(tm)
+#remove whitespaces
+data_3$text_1 <- trimws(data_3$text_1, which = c("both"))
+data_3$text_1 <- gsub("  ", " ", data_3$text_1)
+
+#convert latin1 to ascii characters, remove non-ascii characters, "text is the column name"
+library(dplyr)
+data_5 <- data_3 %>% mutate(text_1 = iconv(text_1, from = "latin1", to = "ASCII")) %>% filter(!is.na(text_1))
+
+#remove duplicate row
+data_6 <- data_5[!duplicated(data_5$text_1),]
+
+#remove blank cells (na or blank)
+data_7 <-  data_6[!(is.na(data_6$text_1) | data_6$text_1==""), ]
+data_8 <- data_7
+names(data_7) <- c("date","tweet","date_c","group_id")
+
+#remove older tweets
+library(sqldf)
+data_9 <- sqldf(" select date_c, tweet, group_id from data_7 where date_c < 'yyyy-m-d 00:00:00' order by date_c desc  ")
+
+#output
+write.csv(data_9,"/location-of-folder/filename.csv")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
