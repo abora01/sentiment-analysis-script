@@ -34,6 +34,11 @@ data_3$text_1 <- gsub("\\b+RT","", data_3$text_1) #remove RT:
 data_3$text_1 <- gsub("\\b+RT:","", data_3$text_1) #remove RT:
 data_3$text_1 <- gsub("\\b+RT :","", data_3$text_1) #remove RT :
 data_3$text_1 <- gsub("(ftp|http)(s?)://.*\\b", "", data_3$text_1) #remove URLs (http, https, ftp)
+
+#remove stopwords and keywords (optional)
+#data_3$text_1 <- removeWords(data_3$text_1,c("abc","xyz"))
+#data_3$text_1 <- data_3$text_1 %>% stopwords() #or use stop_words() , with input parameter as english, spanish etc.
+
 data_3$text_1 <- tolower(data_3$text_1)
 data_3$text_1 <- gsub("#","",data_3$text_1) # remove #
 data_3$text_1 <- gsub("pic[a-z,A-Z,0-9,.,/]*","", pep_3$text_1) 3 remove url part after space
