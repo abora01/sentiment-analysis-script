@@ -32,6 +32,24 @@ sentiment_nrc_3.sadness,sentiment_nrc_3.surprise, sentiment_nrc_3.trust, sentime
 sentiment_nrc_3 where sen.X = sentiment_nrc_3.tweet_id ') 
 write.csv(data_f1,"location/data_sentiment.csv")
 
+# min - max normalization
+# check summary statistics
+summary(pep_f1)
+data_f1$anger_re <- (data_f1$anger - min(data_f1$anger))/(max(data_f1$anger) - min(data_f1$anger))  
+data_f1$anticipation_re <- (data_f1$anticipation - min(data_f1$anticipation))/(max(data_f1$anticipation) - min(data_f1$anticipation)) 
+data_f1$disgust_re <- (data_f1$disgust - min(data_f1$disgust))/(max(data_f1$disgust) - min(data_f1$disgust)) 
+data_f1$fear_re <- (data_f1$fear - min(data_f1$fear))/(max(data_f1$fear) - min(data_f1$fear)) 
+data_f1$joy_re <- (data_f1$joy - min(data_f1$joy))/(max(data_f1$joy) - min(data_f1$joy)) 
+data_f1$negative_re <- (data_f1$negative - min(data_f1$negative))/(max(data_f1$negative) - min(data_f1$negative)) 
+data_f1$positive_re <- (data_f1$positive - min(data_f1$positive))/(max(data_f1$positive) - min(data_f1$positive)) 
+data_f1$sadness_re <- (data_f1$sadness - min(data_f1$sadness))/(max(data_f1$sadness) - min(data_f1$sadness)) 
+data_f1$surprise_re <- (data_f1$surprise - min(data_f1$surprise))/(max(data_f1$surprise) - min(data_f1$surprise)) 
+data_f1$trust_re <- (data_f1$trust - min(data_f1$trust))/(max(data_f1$trust) - min(data_f1$trust)) 
+data_f1$Overall_re <- ((data_f1$Overall - min(data_f1$Overall))/(max(data_f1$Overall) - min(data_f1$Overall))* (2) ) - 1  
+
+write.csv(data_f1,"/Users/xyz/desktop/file_recoded.csv")
+
+
 #before and after response
 data_f1_b <- sqldf(' select date_c,tweet,group_id,anger, anticipation, disgust,fear, joy,negative,positive,sadness,surprise, trust, Overall from data_f1 where group_id = 0')
 data_f1_a <- sqldf(' select date_c,tweet,group_id,anger, anticipation, disgust,fear, joy,negative,positive,sadness,surprise, trust, Overall from data_f1 where group_id = 1')
